@@ -1,0 +1,12 @@
+<div id="list" class="flex flex-col">
+    <div>
+        {% let len = timings.len() %}
+        {% if len == 0 %}
+            <div>I do not have timings</div>
+        {% else %}
+            {% for timing in timings %}
+                {% include "timing.html" %}
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
