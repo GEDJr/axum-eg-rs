@@ -1,11 +1,17 @@
 // https://www.youtube.com/watch?v=rcZSOLAI1lM&list=TLPQMDMwMTIwMjSd_tUmkn098A&index=1
+// https://youtu.be/FlYchvaK3TM?si=IdgQ6Tp_FiRMXu_v
 
+
+mod templates;
+mod db;
+mod error;
+
+use db::{get_timings, push_timing, clear_timings};
+use error::AppError;
+use templates::{Index, TimingType};
 use axum::{response::Html, routing::get, Router};
 use askama::Template;
 // use tokio::sync::Mutex;
-
-mod templates;
-
 
 /*
 lazy_static::lazy_static! {
@@ -13,30 +19,14 @@ lazy_static::lazy_static! {
 }
 */
 
-async fn index() -> Html<String> {
-    return Html(
-        templates::Index {
-            timings: vec![
-                templates::Timing { 
-                    timing_type: "Activity", 
-                    start: 0, 
-                    stop: 56, 
-                    id: 2 
-                },
-                templates::Timing { 
-                    timing_type: "Activity", 
-                    start: 45, 
-                    stop: 70, 
-                    id: 4 
-                }
-            ],
-        }.render().unwrap()
-    );
+async fn index() -> Result<Index, AppError> {
+    return Ok(Index { timings: get_timings().await });
 }
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/", get(index));
+    let app: Router = Router::new()
+        .route("/", get(index));
 
     axum::Server::bind(&"0.0.0.0:41000".parse().unwrap())
         .serve(app.into_make_service())
