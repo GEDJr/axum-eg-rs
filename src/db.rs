@@ -1,10 +1,12 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
+// use log::warn;
 
 use crate::templates::{Timing, TimingType};
 
+#[derive(Debug)]
 pub struct Data {
     timings: Vec<Timing>,
     current_running: Option<Timing>,
@@ -35,10 +37,12 @@ lazy_static::lazy_static! {
 }
 
 pub async fn push_timing(timing_type: TimingType) -> Result<()> {
-    let mut data: tokio::sync::MutexGuard<'_, Data> = DATA.lock().await;
+    let mut data: MutexGuard<'_, Data> = DATA.lock().await;
+    // warn!("Pushing timing: {:?}, with data: {:?}", timing_type, data);
     if let Some(mut timing) = data.current_running.take() {
         if timing.timing_type == timing_type {
             timing.stop = now();
+            data.timings.push(timing);
             return Ok(());
         }
         data.current_running = Some(timing);
@@ -53,17 +57,21 @@ pub async fn push_timing(timing_type: TimingType) -> Result<()> {
     };
 
     data.id += 1;
-    data.timings.push(timing);
+    data.current_running = Some(timing);
 
     return Ok(());
 }
 
 pub async fn get_timings() -> Vec<Timing> {
-    let data: tokio::sync::MutexGuard<'_, Data> = DATA.lock().await;
-    return data.timings.clone();
+    let data: MutexGuard<'_, Data> = DATA.lock().await;
+    let mut out: Vec<Timing> = vec![];
+    if let Some(timing) = &data.current_running {
+        out.push(timing.clone());
+    }
+    return out;
 }
 
 pub async fn clear_timings() {
-    let mut data: tokio::sync::MutexGuard<'_, Data> = DATA.lock().await;
+    let mut data: MutexGuard<'_, Data> = DATA.lock().await;
     data.clear();
 }
